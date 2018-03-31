@@ -1,5 +1,4 @@
 <html>
-
 <head></head>
 <body>
 </body>
@@ -10,10 +9,12 @@
   }
 
   var block_px = 20;
-  var map_w = 5; // block 10 ko.
+  var map_w = 10; // block 10 ko.
   var map_h = 20;
   var map ;
   var cur_block ;
+
+  var cur_blocks;
 
   function getDownElem(elem){
     let par = elem.parentNode;
@@ -57,6 +58,56 @@
     onBlock(cur_block,"red");
   }
 
+  function makeBlocks(){
+    let type = Math.floor( Math.random() * 7 ) ;
+    let offset = 1; // offset from left-most edge of the map to left-most of newly created block.
+    let color = "red";
+    cur_blocks = [];
+    switch(type){
+      case 0: // I-block
+        for(let i=0;i<4;i++) cur_blocks.push(map.children[i].children[offset]);
+        color = "lightskyblue";break;
+      case 1: // J-block
+        cur_blocks.push(map.children[0].children[offset]);
+        for(let i=0;i<3;i++) cur_blocks.push(map.children[1].children[offset+i]);
+        color = "blue";break;
+      case 2: // L-block
+        cur_blocks.push(map.children[0].children[offset+2]);
+        for(let i=0;i<3;i++) cur_blocks.push(map.children[1].children[offset+i]);
+        color = "orange";break;
+      case 3: // O-block
+        for(let i=0;i<2;i++) cur_blocks.push(map.children[0].children[offset+i]);
+        for(let i=0;i<2;i++) cur_blocks.push(map.children[1].children[offset+i]);
+        color = "yellow";break;
+      case 4: // S-block
+        for(let i=0;i<2;i++) cur_blocks.push(map.children[0].children[offset+1+i]);
+        for(let i=0;i<2;i++) cur_blocks.push(map.children[1].children[offset+i]);
+        color = "green";break;
+      case 5: // T-block
+        cur_blocks.push(map.children[0].children[offset+1]);
+        for(let i=0;i<3;i++) cur_blocks.push(map.children[1].children[offset+i]);
+        color = "purple";break;
+      case 6: // Z-block
+        for(let i=0;i<2;i++) cur_blocks.push(map.children[0].children[offset+i]);
+        for(let i=0;i<2;i++) cur_blocks.push(map.children[1].children[offset+1+i]);
+        color ="red";break;
+    }
+    onBlocks(cur_blocks,color);
+  }
+
+  function onBlocks(elems,color){
+    for(let elem of elems){
+      elem.style["background-color"] = color;
+      elem.isBlock = true;
+    }
+  }
+  function offBlocks(elems){
+    for(let elem of elems){
+      elem.style["background-color"] = "white";
+      elem.isBlock = false;
+    }
+  }
+
   function onBlock(elem,color){
     elem.style["background-color"] = color;
     elem.isBlock = true;
@@ -69,36 +120,53 @@
   init();
 
   function moveDown(){
-    let next_cur_block = getDownElem(cur_block);
-    if(!next_cur_block || next_cur_block.isBlock){
-      checkLine();
-      cur_block = null;
-    }else{
-      offBlock(cur_block);
-      onBlock(next_cur_block,"red");
-      cur_block = next_cur_block;
+    let next_cur_blocks = [];
+    for(let i=cur_blocks.length-1;i>=0;i--){
+      let next_cur_block = getDownElem(cur_blocks[i]);
+      if(!next_cur_block || (!cur_blocks.includes(next_cur_block) && next_cur_block.isBlock)){
+        checkLine();
+        cur_blocks = null;
+        return;
+      }
+      next_cur_blocks.push(next_cur_block);
     }
+    let color = cur_blocks[0].style.backgroundColor;
+    offBlocks(cur_blocks);
+    onBlocks(next_cur_blocks, color);
+    cur_blocks = next_cur_blocks;
   }
+
   function moveRight(){
-    let right_block = cur_block.nextSibling;
-    if(!right_block || right_block.isBlock){
-      //do nothing.
-    }else{
-      offBlock(cur_block);
-      onBlock(right_block,"red");
-      cur_block = right_block;
+    let right_blocks = [];
+    for(let cur_block of cur_blocks){
+      let right_block = cur_block.nextSibling;
+      if(!right_block || (!cur_blocks.includes(right_block) &&right_block.isBlock)){
+        return;
+      }
+      right_blocks.push(right_block);
     }
+    let color = cur_blocks[0].style.backgroundColor;
+    offBlocks(cur_blocks);
+    onBlocks(right_blocks,color);
+    cur_blocks = right_blocks;
   }
+
+
   function moveLeft(){
-    let left_block = cur_block.previousSibling;
-    if(!left_block || left_block.isBlock){
-      //do nothing.
-    }else{
-      offBlock(cur_block);
-      onBlock(left_block,"red");
-      cur_block = left_block;
+    let left_blocks = [];
+    for(let cur_block of cur_blocks){
+      let left_block = cur_block.previousSibling;
+      if(!left_block || (!cur_blocks.includes(left_block) && left_block.isBlock)){
+        return;
+      }
+      left_blocks.push(left_block);
     }
+    let color = cur_blocks[0].style.backgroundColor;
+    offBlocks(cur_blocks);
+    onBlocks(left_blocks,color);
+    cur_blocks = left_blocks;
   }
+
 
   function checkLine(){
 
@@ -124,7 +192,8 @@
           let elem = line_tmp.children[0];
           while(elem){
             let down_elem= getDownElem(elem);
-            if(elem.isBlock) onBlock(down_elem,"red");
+            let color = elem.style.backgroundColor;
+            if(elem.isBlock) onBlock(down_elem,color);
             offBlock(elem);
             elem = elem.nextSibling;
           }
@@ -134,13 +203,15 @@
       }
       line = line.nextSibling;
     }
+  }
 
+  function rotate() {
+    
   }
 
   function manager(){
-
-    if(!cur_block){
-      makeBlock();
+    if(!cur_blocks){
+      makeBlocks();
     }else{
       moveDown()
     }
@@ -149,7 +220,7 @@
 
   document.onkeydown = function(event){
     event.preventDefault()
-    if(!cur_block) return;
+    if(!cur_blocks) return;
     if (event.keyCode === 37){
       moveLeft();
     }else if (event.keyCode === 39){
