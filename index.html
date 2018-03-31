@@ -1,0 +1,194 @@
+<html>
+
+<head></head>
+<body>
+</body>
+<script>
+
+  function pxToInt(v){
+    return parseInt(v, 10);
+  }
+
+  var block_px = 20;
+  var map_w = 5; // block 10 ko.
+  var map_h = 20;
+  var map ;
+  var cur_block ;
+
+  function getDownElem(elem){
+    let par = elem.parentNode;
+    let c=0;
+    let pre = elem.previousSibling
+    while(pre){
+      c++;
+      pre = pre.previousSibling;
+    }
+    let down = par.nextSibling;
+    if(!down) return null;
+
+    down = down.children[0];
+    while(c>0){
+      down = down.nextSibling;
+      c--;
+    }
+    return down;
+  }
+
+
+  function init(){
+    map = document.createElement("table");
+    map.setAttribute("id","map");
+
+    for(let i = 0; i< map_h;i++){
+      var tr = document.createElement("tr");
+      for(let j=0;j<map_w;j++){
+        var dot = document.createElement("td");
+        dot.style.width = block_px;
+        dot.style.height = block_px;
+        tr.appendChild(dot);
+      }
+      map.appendChild(tr);
+    }
+    document.body.appendChild(map);
+  }
+
+  function makeBlock(){
+    cur_block =  map.children[0].children[0];
+    onBlock(cur_block,"red");
+  }
+
+  function onBlock(elem,color){
+    elem.style["background-color"] = color;
+    elem.isBlock = true;
+  }
+  function offBlock(elem){
+    elem.style["background-color"] = "white";
+    elem.isBlock = false;
+  }
+
+  init();
+
+  function moveDown(){
+    let next_cur_block = getDownElem(cur_block);
+    if(!next_cur_block || next_cur_block.isBlock){
+      checkLine();
+      cur_block = null;
+    }else{
+      offBlock(cur_block);
+      onBlock(next_cur_block,"red");
+      cur_block = next_cur_block;
+    }
+  }
+  function moveRight(){
+    let right_block = cur_block.nextSibling;
+    if(!right_block || right_block.isBlock){
+      //do nothing.
+    }else{
+      offBlock(cur_block);
+      onBlock(right_block,"red");
+      cur_block = right_block;
+    }
+  }
+  function moveLeft(){
+    let left_block = cur_block.previousSibling;
+    if(!left_block || left_block.isBlock){
+      //do nothing.
+    }else{
+      offBlock(cur_block);
+      onBlock(left_block,"red");
+      cur_block = left_block;
+    }
+  }
+
+  function checkLine(){
+
+    let line = map.children[0];
+    while(line){
+      let f = true;
+      let elem = line.children[0];
+      while(elem){
+        if(!elem.isBlock){
+          f = false;
+          break;
+        }
+        elem = elem.nextSibling;
+      }
+      if(f){
+        let block = line.children[0];
+        while(block){
+          offBlock(block)
+          block = block.nextSibling;
+        }
+        let line_tmp = line.previousSibling;
+        while(line_tmp){
+          let elem = line_tmp.children[0];
+          while(elem){
+            let down_elem= getDownElem(elem);
+            if(elem.isBlock) onBlock(down_elem,"red");
+            offBlock(elem);
+            elem = elem.nextSibling;
+          }
+          line_tmp = line_tmp.previousSibling;
+        }
+        cur_block = null;
+      }
+      line = line.nextSibling;
+    }
+
+  }
+
+  function manager(){
+
+    if(!cur_block){
+      makeBlock();
+    }else{
+      moveDown()
+    }
+  }
+
+
+  document.onkeydown = function(event){
+    event.preventDefault()
+    if(!cur_block) return;
+    if (event.keyCode === 37){
+      moveLeft();
+    }else if (event.keyCode === 39){
+      moveRight();
+    }else if (event.keyCode === 40){
+      moveDown();
+    }
+  }
+
+  setInterval(function(){
+    manager();
+  },300);
+  
+
+</script>
+
+<style type="text/css">
+  html,body,document{
+    width:1000px;
+    height:1000px;
+
+  }
+  table{
+    border-collapse: collapse;
+    position:absolute;
+    left:10px;
+    top:10px;
+    width:200px;
+    height:300px;
+  }
+  table td{
+    border: 1px solid black;
+  }
+
+  .block{
+    width:20px;
+    height:20px;
+    border:0px solid red;
+    background-color: red;
+  }
+</style>
+</html>
