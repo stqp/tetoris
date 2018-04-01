@@ -1,6 +1,13 @@
 <html>
 <head></head>
 <body>
+
+  <div id="area">
+    <div>現在のスコア:<div id="score">0</div></div>
+    <table id="map"></table>
+
+  </div>
+
 </body>
 <script>
 
@@ -8,13 +15,22 @@
     return parseInt(v, 10);
   }
 
+  function sleep(s){
+    const d1 = new Date();
+    while (true) {
+      const d2 = new Date();
+      if (d2 - d1 > s) {
+        break;
+      }
+    }
+  }
+
   var block_px = 20;
   var map_w = 10; // block 10 ko.
   var map_h = 20;
   var map ;
-  var cur_block ;
-
   var cur_blocks;
+  var map_back_color = "#333333";
 
   function getDownElem(elem){
     let par = elem.parentNode;
@@ -35,11 +51,8 @@
     return down;
   }
 
-
-  function init(){
-    map = document.createElement("table");
-    map.setAttribute("id","map");
-
+  function createMap(){
+    map = document.getElementById("map")
     for(let i = 0; i< map_h;i++){
       var tr = document.createElement("tr");
       for(let j=0;j<map_w;j++){
@@ -50,17 +63,17 @@
       }
       map.appendChild(tr);
     }
-    document.body.appendChild(map);
+    map.style.backgroundColor = map_back_color;
   }
 
-  function makeBlock(){
-    cur_block =  map.children[0].children[0];
-    onBlock(cur_block,"red");
+
+  function init(){
+    createMap();
   }
 
   function makeBlocks(){
     let type = Math.floor( Math.random() * 7 ) ;
-    let offset = 1; // offset from left-most edge of the map to left-most of newly created block.
+    let offset = 2; // offset from left-most edge of the map to left-most of newly created block.
     let color = "red";
     cur_blocks = [];
     switch(type){
@@ -97,27 +110,22 @@
 
   function onBlocks(elems,color){
     for(let elem of elems){
-      elem.style["background-color"] = color;
-      elem.isBlock = true;
+      onBlock(elem,color)
     }
   }
   function offBlocks(elems){
     for(let elem of elems){
-      elem.style["background-color"] = "white";
-      elem.isBlock = false;
+      offBlock(elem)
     }
   }
-
   function onBlock(elem,color){
     elem.style["background-color"] = color;
     elem.isBlock = true;
   }
   function offBlock(elem){
-    elem.style["background-color"] = "white";
+    elem.style["background-color"] = map_back_color;
     elem.isBlock = false;
   }
-
-  init();
 
   function moveDown(){
     let next_cur_blocks = [];
@@ -168,20 +176,104 @@
   }
 
 
-  function checkLine(){
+  function getElemFromMap(i,j){
+    if(i<0 || j<0 || i>=map_h || j>=map_w){
+      return null;
+    }
+    return map.children[i].children[j];
+  }
 
+  function isCurBlock(i,j){
+    return cur_blocks.includes(getElemFromMap(i,j));
+  }
+
+  function canRotate(from_i,from_j, to_i,to_j){
+    let from = getElemFromMap(from_i,from_j);
+    let to = getElemFromMap(to_i,to_j);
+    if(!from || !to){
+      return false;
+    }
+    return true;
+  }
+
+  function rotate(params){
+    let tos = [];
+    let toIdxs = [];
+    let color;
+    for(let p of params){
+      let from = getElemFromMap(p[0],p[1]);
+      let to = getElemFromMap(p[2],p[3]);
+      if(!color) color=from.style.backgroundColor;
+      for(let i=0;i<cur_blocks.length;i++){
+        if(cur_blocks[i] === from){
+          toIdxs.push(i);
+          tos.push(to);
+          offBlock(from);
+        }
+      }
+    }
+    console.log(params)
+    for(let i=0;i<toIdxs.length;i++){
+      onBlock(tos[i],color);
+      cur_blocks[toIdxs[i]] = tos[i];
+    }
+  }
+
+
+  function moveRotate() {
+    let row = map.children;
+    let f = false; // ignore firstly found cur_block. because I-Block pattern.
+    for(let i=0;i<map_h;i++){
+      let colm = row[i].children;
+      for(let j=0;j<map_w;j++){
+        if(cur_blocks.includes(colm[j]) ){
+          if(f === false){
+            f = true;
+            continue;
+          }
+          let center_block = colm[j];
+          let params = [];
+          let dk = i-2;
+          let dl = j-2;
+          for(let k=0;k<5;k++){
+            for(let l=0;l<5;l++){
+              if(k==2 && l==2)continue;
+              let p = [dk+k, dl+l, dk+(4-l), dl+k];
+              if(isCurBlock(p[0],p[1])){
+                if(!canRotate(p[0],p[1],p[2],p[3])){
+                  return;
+                } 
+                params.push(p);
+              }
+            }
+          }
+          rotate(params);
+          return;
+        }
+      }
+    }
+  }
+
+  function scoreUp(){
+    let score_board = document.getElementById("score");
+    let cur_score = parseInt(score_board.innerHTML);
+    let next_score = cur_score+ 10;
+    score_board.innerHTML = next_score;
+  }
+
+  function checkLine(){
     let line = map.children[0];
     while(line){
-      let f = true;
+      let flag = true; // delete line flag.
       let elem = line.children[0];
       while(elem){
         if(!elem.isBlock){
-          f = false;
+          flag = false;
           break;
         }
         elem = elem.nextSibling;
       }
-      if(f){
+      if(flag){
         let block = line.children[0];
         while(block){
           offBlock(block)
@@ -200,14 +292,12 @@
           line_tmp = line_tmp.previousSibling;
         }
         cur_block = null;
+        scoreUp();
       }
       line = line.nextSibling;
     }
   }
 
-  function rotate() {
-    
-  }
 
   function manager(){
     if(!cur_blocks){
@@ -217,6 +307,7 @@
     }
   }
 
+  init();
 
   document.onkeydown = function(event){
     event.preventDefault()
@@ -227,39 +318,37 @@
       moveRight();
     }else if (event.keyCode === 40){
       moveDown();
+    }else if (event.keyCode === 32){
+      moveRotate();
     }
   }
 
   setInterval(function(){
     manager();
+    //location.reload();
   },300);
-  
-
 </script>
 
-<style type="text/css">
-  html,body,document{
-    width:1000px;
-    height:1000px;
 
-  }
+<style type="text/css">
   table{
     border-collapse: collapse;
-    position:absolute;
-    left:10px;
-    top:10px;
     width:200px;
     height:300px;
+    border:5px solid #999999;
   }
   table td{
     border: 1px solid black;
   }
-
-  .block{
-    width:20px;
-    height:20px;
-    border:0px solid red;
-    background-color: red;
+  #score{
+    border-bottom:1px solid;
+    width:60px;
+    height:15px;
+    margin:10px;
+    padding:5px;
+    text-align: right;
+    vertical-align: center;
+    display:inline-block;
   }
 </style>
 </html>
